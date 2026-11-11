@@ -1,0 +1,50 @@
+name: Android Release APK
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Build Release APK
+        run: gradle :app:assembleRelease --no-daemon
+
+      - name: Rename APK
+        run: cp app/build/outputs/apk/release/app-release.apk Yarzar-1.6.3-android.apk
+
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Yarzar-1.6.3-android-apk
+          path: Yarzar-1.6.3-android.apk
+
+      - name: Attach APK to GitHub Release v1.6.3
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if gh release view v1.6.3 >/dev/null 2>&1; then
+            gh release upload v1.6.3 Yarzar-1.6.3-android.apk --clobber
+          else
+            gh release create v1.6.3 Yarzar-1.6.3-android.apk --title "Yarzar for Android v1.6.3" --notes "Yarzar for Android (Kotlin + Jetpack Compose Material 3) release APK."
+          fi
